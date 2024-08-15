@@ -1,0 +1,36 @@
+{
+  "name": "WordPress",
+
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "wordpress",
+
+  // Uncomment the appropriate line depending on plugin vs theme development.
+  // This should match the active volume mount in docker-compose.yml
+  //"workspaceFolder": "/var/www/html/wp-content/plugins/masterkey",
+  //"workspaceFolder": "/var/www/html/wp-content/themes/theme-dev",
+  "workspaceFolder": "/app",
+  // "mounts": [
+  //   "source=/app/masterkey,target=/var/www/html/wp-content/plugins/masterkey,type=bind,consistency=cached",
+  //   "source=/app/theme,target=/var/www/html/wp-content/themes/masterkey,type=bind,consistency=cached"
+  // ],
+
+  "customizations": {
+    "vscode": {
+      // Set *default* container specific settings.json values on container create.
+      "settings": { 
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "php.suggest.basic": false // avoids duplicate autocomplete
+      },
+      // Add the IDs of any extensions you want installed.
+      "extensions": [
+        "xdebug.php-pack",
+        "wordpresstoolbox.wordpress-toolbox",
+        "johnbillion.vscode-wordpress-hooks"
+      ]
+   }
+  },
+
+  // Sets up WordPress on container start.
+  "postCreateCommand": ".devcontainer/wp-setup.sh",
+  "remoteUser": "vscode"
+}
