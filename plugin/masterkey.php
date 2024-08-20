@@ -97,15 +97,18 @@ class MasterKey {
      * Render block
      */
     public function render_block($attributes) {
-        return 'MasterKey block';
-        // add_action('wp_footer', array($this, 'wp_footer'));//'inject_keyboard'));
-        // $this->sess_init();
-        // $this->enqueue_scripts();
-        // ob_start();
-        // $this->render_qrcode();
-        // $output = ob_get_contents();
-        // ob_end_clean();
-        // return $output;
+        if (is_admin()) {
+            return 'MasterKey block';
+        } else {
+            add_action('wp_footer', array($this, 'wp_footer'));//'inject_keyboard'));
+            $this->sess_init();
+            $this->enqueue_scripts();
+            ob_start();
+            $this->render_qrcode();
+            $output = ob_get_contents();
+            ob_end_clean();
+            return $output;
+        }
     }
 
     /**
@@ -161,7 +164,7 @@ class MasterKey {
         if (wp_is_mobile()) return;
         $this->render_qrcode(true);
         ?> <script>
-            document.addEventListener("DOMContentLoaded", () => jQuery('#masterkey-qrcode').prependTo('#loginform'));
+            document.addEventListener("DOMContentLoaded", () => jQuery('#masterkey-wrapper').prependTo('#loginform'));
         </script> <?php
     }
 
@@ -176,14 +179,16 @@ class MasterKey {
         if (!empty($mk->session)) {
             $ecl = get_option('masterkey_qrquality', 'medium');
             ?>
-            <div id="masterkey-qrcode">
-              <h1>Scan to Login</h1>
-              <div id="masterkey-qrcode-img">
-                <?php echo $mk->qrcode($ecl); ?>
-                <div id="masterkey-secured-by">
-                    <?php echo file_get_contents(MASTERKEY_PLUGIN_DIR . 'images/mk-secured-by.svg'); ?>
-                </div>
-              </div> <?php if ($or) { ?>
+            <div id="masterkey-wrapper">
+              <div id="masterkey-qrcode">
+                <h1>Scan to Login</h1>
+                <div id="masterkey-qrcode-img">
+                    <?php echo $mk->qrcode($ecl); ?>
+                    <div id="masterkey-secured-by">
+                        <?php echo file_get_contents(MASTERKEY_PLUGIN_DIR . 'images/mk-secured-by.svg'); ?>
+                    </div>
+                </div> <?php if ($or) { ?>
+              </div>
               <div id="masterkey-seperator"><span>or</span></div> <?php } ?>
             </div>
             <?php

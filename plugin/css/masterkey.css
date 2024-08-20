@@ -1,12 +1,19 @@
-#masterkey-qrcode {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 1.5rem;
+#masterkey-wrapper {
+  width: 100%;
+  margin-bottom: 1.5rem;
 }
+#masterkey-qrcode {
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 13rem;
+  }
 
 #masterkey-qrcode h1 {
   text-align: center;
+  font-size: 1.9rem;
+  font-weight: bold;
   margin-bottom: 1rem;
 }
 

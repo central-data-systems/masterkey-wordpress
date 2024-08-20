@@ -1,4 +1,5 @@
 (function (wp) {
+  var useSelect = wp.data.useSelect;
   var registerBlockType = wp.blocks.registerBlockType;
   var el = wp.element.createElement;
   var useBlockProps = wp.blockEditor.useBlockProps;
@@ -10,8 +11,7 @@
 
   function editTime() {
     var blockProps = useBlockProps();
-    //var style = {props:{style:{ maxHeight: '200px', marginLeft: 'auto', marginRight: 'auto', display: 'block' }}};
-    return el('div', blockProps, logo);//Object.assign({}, logo, style));
+    return el('div', blockProps, logo);
   }
 
   registerBlockType('masterkey/qrcode-block', {
@@ -19,18 +19,17 @@
     icon: logo,
     category: 'theme',
     edit: function (props) {
-      props.set
-      return editTime();
-      // return el(ServerSideRender, {
-      //     block: 'masterkey/qrcode-block',
-      //     attributes: props.attributes,
-      //   });
+      var isEditing = useSelect(function (select) {
+        const editor = select('core/editor');
+        return !!editor && typeof editor.getCurrentPostId === 'function';
+      }, []);
+      return isEditing ? editTime()
+      : el(ServerSideRender, {
+          block: 'masterkey/qrcode-block',
+          attributes: props.attributes,
+        });
     },
     save: function(props) {
-      // return el(ServerSideRender, {
-      //   block: 'masterkey/qrcode-block',
-      //   attributes: props.attributes,
-      // });
       return null; // We're using a dynamic block, so we don't need to save anything
     },
   });
