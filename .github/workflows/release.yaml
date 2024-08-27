@@ -1,0 +1,26 @@
+name: Generate Release
+on:
+  release:
+    types: [published]
+jobs:
+  build:
+    name: Generate Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Create Artifact
+        run: |
+          mkdir -p build
+          zip -X -r build/masterkey-connector.zip plugin
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: masterkey-connector
+          path: build/masterkey-connector.zip
+      - name: Upload Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/masterkey-connector.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
