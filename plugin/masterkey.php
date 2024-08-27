@@ -1,13 +1,13 @@
 <?php
 /**
  * Plugin Name: MasterKey
- * Plugin URI: https://bankvault.com/wordpress
- * Description: Add MasterKey integration.
+ * Plugin URI: https://github.com/central-data-systems/masterkey-wordpress.git
+ * Description: MasterKey connector for Wordpress.
  * Version: 1.0.0
  * Author: Central Data System Pty Ltd
  * Author URI: https://central-data.net
- * License: MIT
- * License URI: 
+ * License: GPLv3
+ * License URI: https://www.gnu.org/copyleft/gpl.html
  */
 
 if (!defined('WPINC')) {
@@ -26,6 +26,14 @@ require_once MASTERKEY_PLUGIN_DIR . 'includes/MasterKeySession.php';
  * The core plugin class.
  */
 class MasterKey {
+    static private $setting2class = [
+        'none' => '',
+        'left' => 'horiz-start',
+        'right' => 'horiz-end',
+        'above' => 'vert-start',
+        'below' => 'vert-end',
+    ];
+
     static private function create_new_mk_session() {
         $apikey = get_option('masterkey_apikey');
         $kbapi_host = get_option('masterkey_kbapihost');
@@ -46,16 +54,18 @@ class MasterKey {
     }
 
     private $rbk; // Block type registry
+    private $logo; // svg logo
 
     /**
      * Initialize the plugin.
      */
     public function __construct() {
+        $this->logo = file_get_contents(MASTERKEY_PLUGIN_DIR . 'logo.svg');
         add_action('init', array($this, 'init'));
 
         add_action('login_init', array($this, 'sess_init'));
         add_action('login_form', array($this, 'render_qrcode_login'), 10, 1);
-        add_action('login_enqueue_scripts', array($this, 'enqueue_scripts'));
+        add_action('login_enqueue_scripts', array($this, 'enqueue_login_scripts'));
         add_action('login_footer', array($this, 'inject_keyboard'));
 
         add_action('wp_authenticate', array($this, 'authenticate'), 10, 2);
@@ -81,34 +91,49 @@ class MasterKey {
      */
     public function register_block() {
         wp_register_script(
-            'masterkey-block',
+            'masterkey-block-js',
             MASTERKEY_PLUGIN_URL . 'js/masterkey-block.js',
             array('wp-blocks', 'wp-element', 'wp-editor', 'wp-components', 'wp-i18n'),
             MASTERKEY_VERSION
         );
+        wp_localize_script( 'masterkey-block-js', "masterkeyVars", ['secured_by' => MASTERKEY_PLUGIN_URL . 'images/mk-secured-by.svg'] );
 
-        return register_block_type('masterkey/qrcode-block', array(
-            'editor_script' => 'masterkey-block',
+        $rbk = register_block_type('masterkey/login-block', array(
+            'editor_script' => 'masterkey-block-js',
             'render_callback' => array($this, 'render_block'),
+            'attributes' => [
+                'use_form' => ['enum' => ['none', 'left', 'right', 'above', 'below'], 'default' => 'none'],
+            ]
         ));
+        wp_enqueue_block_style('masterkey/login-block', [
+            'handle' => 'masterkey-block-css',
+            'src' => MASTERKEY_PLUGIN_URL . 'css/masterkey.css',
+        ]);
+        wp_enqueue_block_style('masterkey/login-block', [
+            'handle' => 'masterkey-wp-login-css',
+            'src' => MASTERKEY_PLUGIN_URL . 'css/login-form.css', //  '/wp-admin/css/login.css',
+        ]);
+        return $rbk;
     }
 
     /**
      * Render block
      */
     public function render_block($attributes) {
-        if (is_admin()) {
-            return 'MasterKey block';
-        } else {
-            add_action('wp_footer', array($this, 'wp_footer'));//'inject_keyboard'));
-            $this->sess_init();
-            $this->enqueue_scripts();
-            ob_start();
-            $this->render_qrcode();
-            $output = ob_get_contents();
-            ob_end_clean();
-            return $output;
+        $is_editor = defined('REST_REQUEST') && REST_REQUEST;
+        $use_form = $attributes['use_form'];
+        $is_mobile = wp_is_mobile();
+        if ($is_editor || is_admin()) {
+            if (!$is_editor) return '** MasterKey **';
+            return $this->render_masterkey($this->logo, $use_form, true);
         }
+        if ($is_mobile) add_action('wp_footer', array($this, 'inject_keyboard'));
+        $mk = $this->sess_init();
+        if (!$mk || empty($mk->session)) return;
+        $this->enqueue_mk_scripts();
+        if ($is_mobile) return;
+        $ecl = get_option('masterkey_qrquality', 'medium');
+        return $this->render_masterkey($mk->qrcode($ecl), $use_form);
     }
 
     /**
@@ -131,12 +156,18 @@ class MasterKey {
             $_SESSION['masterkey'] = serialize($mk);
         }
         wp_cache_set('masterkey', $mk);
+        return $mk;
     }
 
     /**
      * Enqueue scripts and styles.
      */
-    public function enqueue_scripts() {
+    public function enqueue_login_scripts() {
+        $this->enqueue_mk_scripts();
+        wp_enqueue_style('masterkey-css', MASTERKEY_PLUGIN_URL . 'css/masterkey.css', array(), MASTERKEY_VERSION);
+    }
+
+    private function enqueue_mk_scripts() {
         $mk = wp_cache_get('masterkey');
         if (!$mk || empty($mk->session)) return;
 
@@ -154,7 +185,15 @@ class MasterKey {
             'session' => $mk->session,
             'secret' => wp_is_mobile() ? $mk->secret : null,
         ));
-        wp_enqueue_style('masterkey-css', MASTERKEY_PLUGIN_URL . 'css/masterkey.css', array(), MASTERKEY_VERSION);
+    }
+
+    private function render_masterkey($svg, $use_form) {
+        $login_form = $use_form !== 'none' ? '<div class="wp-block-masterkey-login-block login-form-block"><h1>Login</h1>' . wp_login_form(array('echo' => false)) . '</div>' : null;
+        ob_start();
+        $this->render_qrcode($svg, $use_form, $login_form);
+        $output = ob_get_contents();
+        ob_end_clean();
+        return $output;
     }
 
     /**
@@ -162,7 +201,10 @@ class MasterKey {
      */
     public function render_qrcode_login() {
         if (wp_is_mobile()) return;
-        $this->render_qrcode(true);
+        $mk = wp_cache_get('masterkey');
+        if (!$mk || empty($mk->session)) return;
+        $ecl = get_option('masterkey_qrquality', 'medium');
+        $this->render_qrcode($mk->qrcode($ecl));
         ?> <script>
             document.addEventListener("DOMContentLoaded", () => jQuery('#masterkey-wrapper').prependTo('#loginform'));
         </script> <?php
@@ -171,30 +213,24 @@ class MasterKey {
     /**
      * Add QR code to login form.
      */
-    public function render_qrcode($or = false) {
-        if (wp_is_mobile()) return;
-        $mk = wp_cache_get('masterkey');
-        if (!$mk) return;
-
-        if (!empty($mk->session)) {
-            $ecl = get_option('masterkey_qrquality', 'medium');
-            ?>
-            <div id="masterkey-wrapper">
-              <div id="masterkey-qrcode">
+    private function render_qrcode($svg, $use_form = 'below', $form = null) {
+        $class = self::$setting2class[$use_form];
+        ?><div id="masterkey-wrapper" class="<?php echo $class; ?>">
+            <div id="masterkey-scan">
                 <h1>Scan to Login</h1>
-                <div id="masterkey-qrcode-img">
-                    <?php echo $mk->qrcode($ecl); ?>
+                <div id="masterkey-scan-img">
+                    <?php echo $svg; ?>
                     <div id="masterkey-secured-by">
                         <?php echo file_get_contents(MASTERKEY_PLUGIN_DIR . 'images/mk-secured-by.svg'); ?>
                     </div>
-                </div> <?php if ($or) { ?>
-              </div>
-              <div id="masterkey-seperator"><span>or</span></div> <?php } ?>
+                </div>
             </div>
-            <?php
-        } else {
-            echo '<p>' . $mk->error . '</p>';
-        }
+            <?php if ($use_form !== 'none') { ?><div id="masterkey-divider"><div></div><p>or</p><div></div></div> <?php } ?>
+            <?php if ($form) echo $form;?>
+        </div><?php
+    // } else {
+    //     echo '<p>' . $mk->error . '</p>';
+    // }
     }
 
     /**
@@ -213,10 +249,6 @@ class MasterKey {
           <iframe id="iframe-vault" sandbox="allow-same-origin allow-scripts allow-modals" style="height:0px;width:100%;margin-bottom:0x;border:none;" frameborder="0" src="https://<?php echo esc_attr($mk->passwordlesshost); ?>/vault/"></iframe>
         </aside>
         <?php
-    }
-
-    function wp_footer() {
-        $this->inject_keyboard();
     }
 
     /**

@@ -77,10 +77,8 @@ USER www-data
 #Download WP
 RUN wp core download
 
-#add dirs for plugin and theme dev
 ARG PROJECT_NAME=masterkey
-RUN ln -s /app/plugin /var/www/html/wp-content/plugins/${PROJECT_NAME}; \
-    ln -s /app/theme /var/www/html/wp-content/themes/${PROJECT_NAME};
+RUN ln -s /app/plugin /var/www/html/wp-content/plugins/${PROJECT_NAME};
 
 USER root
 RUN chown -R www-data:www-data /var/www/html/

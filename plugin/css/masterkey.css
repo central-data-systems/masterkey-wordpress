@@ -1,32 +1,62 @@
 #masterkey-wrapper {
+  display: flex;
+  gap: 0;
+  justify-content: center;
+  align-items: center;
   width: 100%;
-  margin-bottom: 1.5rem;
+  padding: 0;
 }
-#masterkey-qrcode {
+
+#masterkey-wrapper.vert-end {
+  flex-direction: column;
+}
+
+#masterkey-wrapper.vert-start {
+  flex-direction: column-reverse;
+}
+
+#masterkey-wrapper.horiz-end {
+  flex-direction: row;
+  align-items: start;
+}
+
+#masterkey-wrapper.horiz-start {
+  flex-direction: row-reverse;
+  align-items: start;
+}
+
+#masterkey-scan {
   margin: 0 auto;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   max-width: 13rem;
-  }
+}
 
-#masterkey-qrcode h1 {
+#masterkey-scan > * {
+  margin: 0;
+}
+
+#masterkey-wrapper h1 {
   text-align: center;
   font-size: 1.9rem;
   font-weight: bold;
-  margin-bottom: 1rem;
+  white-space: nowrap;
+  margin-bottom: 0.5rem;
 }
 
-/* #masterkey-qrcode-img {
-  width: 100%;
-} */
+#masterkey-wrapper.horiz-start #masterkey-scan h1,
+#masterkey-wrapper.horiz-end #masterkey-scan h1 {
+  margin-bottom: 2.5rem;
+}
 
-#masterkey-qrcode-img {
+#masterkey-scan-img {
   width: 100%;
   max-width: 10rem;
 }
 
-#masterkey-qrcode-img>svg {
+#masterkey-scan-img>svg {
   width: 100%;
 }
 
@@ -40,20 +70,44 @@
   height: 1.8rem;
 }
 
-#masterkey-seperator {
-  margin-top: 1.5rem;
-  width: 100%;
-  text-align: center;
-  border-bottom: 1px solid #888;
-  line-height: 0.01em;
+#masterkey-divider {
+  align-self: stretch;
+  justify-self: center;
+  display: flex;
+  align-items: center;
 }
 
-#masterkey-seperator > span {
-  text-transform: uppercase;
+#masterkey-wrapper.horiz-start > #masterkey-divider,
+#masterkey-wrapper.horiz-end > #masterkey-divider {
+  flex-direction: column;
+}
+
+#masterkey-wrapper.vert-start > #masterkey-divider,
+#masterkey-wrapper.vert-end > #masterkey-divider {
+  flex-direction: row;
+}
+
+#masterkey-divider > p {
+  color: rgb(90, 90, 90);
   font-size: 0.8rem;
-  font-weight: bold;
-  background-color: #fff;
-  padding: 0 10px;
+  font-weight: bolder;
+  text-transform: uppercase;
+  padding: 0 1rem;
+}
+
+#masterkey-divider > div {
+  background-color: rgb(90, 90, 90);
+  flex: 1;
+}
+
+#masterkey-wrapper.horiz-start #masterkey-divider > div,
+#masterkey-wrapper.horiz-end #masterkey-divider > div {
+  width: 1px;
+}
+
+#masterkey-wrapper.vert-start #masterkey-divider > div,
+#masterkey-wrapper.vert-end #masterkey-divider > div {
+  height: 1px;
 }
 
 #bankvault-keyboard {
